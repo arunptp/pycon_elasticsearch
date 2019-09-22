@@ -1,4 +1,5 @@
 from elasticsearch import Elasticsearch
+from elasticsearch import helpers
 
 from searchapp.constants import DOC_TYPE, INDEX_NAME
 from searchapp.data import all_products, ProductData
@@ -11,13 +12,15 @@ def main():
     es.indices.delete(index=INDEX_NAME, ignore=404)
     es.indices.create(
         index=INDEX_NAME,
-        body={
-            'mappings': {},
-            'settings': {},
-        },
+        # body={
+        #    'mappings': {},
+        #    'settings': {},
+        #},
     )
-
-    index_product(es, all_products()[0])
+    # pdts = all_products()
+    # for p in pdts:
+        # index_product(es, p)
+    products_index(es)
 
 
 def index_product(es, product: ProductData):
@@ -26,16 +29,34 @@ def index_product(es, product: ProductData):
     es.create(
         index=INDEX_NAME,
         doc_type=DOC_TYPE,
-        id=1,
+        id=product.id,
         body={
-            "name": "A Great Product",
-            "image": "http://placekitten.com/200/200",
+            "name": product.name,
+            "image": product.image,
         }
     )
 
     # Don't delete this! You'll need it to see if your indexing job is working,
     # or if it has stalled.
     print("Indexed {}".format("A Great Product"))
+
+def products_index(es):
+    actions = []
+    pdts = all_products()
+    for product in pdts:
+        action = {
+            "_index": INDEX_NAME,
+            "_type": DOC_TYPE,
+            "_id": product.id,
+            "_source": {
+                "name": product.name,
+                "image": product.image,
+                "description":product.description
+                }
+                }
+        actions.append(action)
+
+    helpers.bulk(es, actions)
 
 
 if __name__ == '__main__':
